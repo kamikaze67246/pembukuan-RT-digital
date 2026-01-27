@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 10px; background: #f8f9fa; }
+    .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #343a40; color: white; }
+    .btn-del { background: #ff4d4d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .input-group { display: flex; flex-direction: column; gap: 5px; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body onload="loadData()">
+  <div class="no-print">
+    <h3>Sistem Keuangan RT 01</h3>
+    <div id="status" class="card">Memuat ringkasan...</div>
+    
+    <div class="card">
+      <b>Input Transaksi</b>
+      <div class="input-group">
+        <input type="text" id="ket" placeholder="Keterangan / Nama Peminjam">
+        <input type="number" id="nom" placeholder="Nominal Rp">
+        <button style="background:#28a745; color:white; padding:10px;" onclick="gasKas('Masuk')">Simpan Kas Masuk</button>
+        <button style="background:#dc3545; color:white; padding:10px;" onclick="gasKas('Keluar')">Simpan Kas Keluar</button>
+        <button style="background:#ffc107; padding:10px;" onclick="gasPinjam()">Pinjaman Baru (Bunga 5%)</button>
+      </div>
+      <hr>
+      <div class="input-group">
+        <input type="text" id="idP" placeholder="ID Pinjaman (Contoh: P-12345)">
+        <button style="background:#17a2b8; color:white; padding:10px;" onclick="gasCicil()">Simpan Cicilan Manual</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="printArea">
+    <h4>Riwayat Kas (Saldo Mengalir)</h4>
+    <table>
+      <thead><tr><th>Tgl</th><th>Keterangan</th><th>Masuk</th><th>Keluar</th><th>Saldo</th><th class="no-print">Aksi</th></tr></thead>
+      <tbody id="tabelKas"></tbody>
+    </table>
+
+    <h4>Data Pinjaman Warga</h4>
+    <table>
+      <thead><tr><th>ID</th><th>Nama</th><th>Total Utang</th><th>Sisa</th><th>Status</th><th class="no-print">Aksi</th></tr></thead>
+      <tbody id="isiPinjam"></tbody>
+    </table>
+  </div>
+
+  <script>
+    function loadData() {
+      google.script.run.withSuccessHandler(d => {
+        document.getElementById('status').innerHTML = `<b>Saldo Fisik: Rp ${d.saldoFisik.toLocaleString()}</b><br>Sisa Tagihan Warga: Rp ${d.totalUtang.toLocaleString()}`;
+        
+        let hKas = ""; 
+        d.riwayatKas.forEach((r, i) => { 
+          hKas += `<tr><td>${new Date(r[0]).toLocaleDateString()}</td><td>${r[2]}</td><td>${r[3]=='Masuk'?r[4]:0}</td><td>${r[3]=='Keluar'?r[4]:0}</td><td>${r[5]}</td>
+          <td class="no-print"><button class="btn-del" onclick="hapusRow('Kas_Umum', ${i})">X</button></td></tr>`; 
+        });
+        document.getElementById('tabelKas').innerHTML = hKas;
+
+        let hP = ""; 
+        d.dataPeminjam.forEach((p, i) => { 
+          hP += `<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[5]}</td><td>${p[7]}</td><td>${p[8]}</td>
+          <td class="no-print"><button class="btn-del" onclick="hapusRow('Data_Pinjaman', ${i})">X</button></td></tr>`; 
+        });
+        document.getElementById('isiPinjam').innerHTML = hP;
+      }).getFullData();
+    }
+
+    function hapusRow(sheet, index) {
+      if(confirm("Yakin arep mbusak data iki?")) {
+        google.script.run.withSuccessHandler(res => { alert(res); loadData(); }).hapusBaris(sheet, index);
+      }
+    }
+    // (Fungsi simpan gasKas, gasPinjam, gasCicil tetep kados dhuwur)
+    function gasKas(t) { google.script.run.withSuccessHandler(res => { alert(res); loadData(); }).tambahKas(document.getElementById('ket').value, t, document.getElementById('nom').value); }
+    function gasPinjam() { google.script.run.withSuccessHandler(res => { alert(res); loadData(); }).inputPinjaman(document.getElementById('ket').value, document.getElementById('nom').value); }
+    function gasCicil() { google.script.run.withSuccessHandler(res => { alert(res); loadData(); }).inp
